@@ -1,14 +1,20 @@
 package com.buyio.catalog.controller;
 
-import com.buyio.catalog.dto.PriceDto;
-import com.buyio.catalog.dto.ProductDto;
-import com.buyio.catalog.service.ProductService;
+import com.buyio.catalog.domain.Price;
+import com.buyio.catalog.domain.Product;
+import com.buyio.catalog.domain.Supplier;
+import com.buyio.catalog.repository.PriceRepository;
+import com.buyio.catalog.repository.ProductRepository;
+import com.buyio.catalog.repository.SupplierRepository;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,30 +23,60 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductController {
 
-    private final ProductService productService;
-
-    @PostMapping
-    public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(dto));
-    }
+    private final ProductRepository productRepository;
+    private final SupplierRepository supplierRepository;
+    private final PriceRepository priceRepository;
 
     @GetMapping
-    public ResponseEntity<List<ProductDto>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<List<ProductResponse>> getAll() {
+        List<ProductResponse> list = productRepository.findAll().stream().map(p -> {
+            BigDecimal activePrice = p.getPrices().stream()
+                    .filter(Price::getIsActive)
+                    .map(Price::getUnitPrice)
+                    .findFirst().orElse(BigDecimal.ZERO);
+            return new ProductResponse(p.getId(), p.getSku(), p.getName(), p.getDescription(), 
+                                       p.getCategory(), p.getStatus(), p.getSupplier().getTaxId(), activePrice);
+        }).toList();
+        return ResponseEntity.ok(list);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ProductDto> getProductById(@PathVariable UUID id) {
-        return ResponseEntity.ok(productService.getProductById(id));
+    @PostMapping
+    @Transactional
+    public ResponseEntity<Product> create(@Valid @RequestBody CreateProductRequest req) {
+        Supplier supplier = supplierRepository.findById(req.supplierId())
+                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+
+        Product product = Product.builder()
+                .sku(req.sku())
+                .name(req.name())
+                .description(req.description())
+                .category(req.category())
+                .supplier(supplier)
+                .status("ACTIVE")
+                .build();
+        Product saved = productRepository.save(product);
+
+        Price price = Price.builder()
+                .product(saved)
+                .unitPrice(req.price())
+                .currency("USD")
+                .isActive(true)
+                .validFrom(OffsetDateTime.now())
+                .build();
+        priceRepository.save(price);
+
+        return ResponseEntity.ok(saved);
     }
 
-    @PostMapping("/{id}/prices")
-    public ResponseEntity<PriceDto> updatePrice(@PathVariable UUID id, @Valid @RequestBody PriceDto priceDto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(productService.updatePrice(id, priceDto));
-    }
+    public record CreateProductRequest(
+        @NotBlank String sku,
+        @NotBlank String name,
+        String description,
+        String category,
+        @NotNull UUID supplierId,
+        @NotNull @DecimalMin("0.01") BigDecimal price
+    ) {}
 
-    @GetMapping("/{id}/prices/history")
-    public ResponseEntity<List<PriceDto>> getPriceHistory(@PathVariable UUID id) {
-        return ResponseEntity.ok(productService.getPriceHistory(id));
-    }
+    public record ProductResponse(UUID id, String sku, String name, String description, 
+                                  String category, String status, String supplierTaxId, BigDecimal currentPrice) {}
 }
