@@ -1,4 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Elimina o comenta esta línea incompatible con H2:
+-- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS suppliers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
