@@ -8,8 +8,8 @@
 		<version>4.1.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.exam</groupId>
-	<artifactId>catalog-service</artifactId>
+	<groupId>com.buyio</groupId>
+	<artifactId>buyio-catalog-service</artifactId>
 	<version>1.0.0</version>
 	<name>buyio-catalog-service</name>
     <description>Catalog Microservice for BuyIO Platform</description>
