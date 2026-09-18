@@ -2,6 +2,7 @@ package com.buyio.catalog.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,18 +14,23 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import javax.crypto.SecretKey;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
+
+    private Key getSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -35,23 +41,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
-
-               // 1. Crear la clave secreta de forma segura
-                SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-
-                // 2. Sintaxis obligatoria para versiones antiguas de JJWT (0.9.x)
-                // Se configura la firma y se procesa el token SIN usar .build()
-                Claims claims = Jwts.parser()
-                    .setSigningKey(key)          // En versiones viejas se usa setSigningKey
-                    .parseClaimsJws(token)       // En versiones viejas se usa parseClaimsJws
-                    .getBody();                  // En versiones viejas se usa getBody
-
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(getSigningKey())
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
 
                 String username = claims.getSubject();
-                String role = claims.get("role", String.class);
+                
+                @SuppressWarnings("unchecked")
+                List<String> roles = claims.get("roles", List.class);
 
-                List<SimpleGrantedAuthority> authorities = role != null 
-                        ? List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                List<SimpleGrantedAuthority> authorities = (roles != null)
+                        ? roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList())
                         : Collections.emptyList();
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
@@ -60,7 +62,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception e) {
-                SecurityContextHolder.clearContext();
+             System.err.println(">>> Error validando JWT en Catalog Service: " + e.getMessage());
+             e.printStackTrace();
+             SecurityContextHolder.clearContext();
             }
         }
 
