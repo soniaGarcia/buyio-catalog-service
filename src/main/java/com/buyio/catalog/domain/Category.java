@@ -3,50 +3,30 @@ package com.buyio.catalog.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
+@Table(name = "categories")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Product {
+public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id", nullable = false)
-    private Supplier supplier;
-
-    @Column(nullable = false, unique = true, length = 50)
-    private String sku;
-
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, unique = true, length = 100)
     private String name;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
-
-    @Column(name = "unit_of_measure", length = 20)
-    private String unitOfMeasure;
-
     @Builder.Default
-    @Column(length = 20)
-    private String status = "ACTIVE";
-
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Price> prices = new ArrayList<>();
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

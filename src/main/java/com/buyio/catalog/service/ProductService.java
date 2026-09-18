@@ -1,5 +1,6 @@
 package com.buyio.catalog.service;
 
+import com.buyio.catalog.domain.Category;
 import com.buyio.catalog.domain.Price;
 import com.buyio.catalog.domain.Product;
 import com.buyio.catalog.domain.Supplier;
@@ -9,6 +10,7 @@ import com.buyio.catalog.dto.ProductDto;
 import com.buyio.catalog.repository.PriceRepository;
 import com.buyio.catalog.repository.ProductRepository;
 import com.buyio.catalog.repository.SupplierRepository;
+import com.buyio.catalog.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
+    private final CategoryRepository categoryRepository;
     private final PriceRepository priceRepository;
     private final CatalogEventPublisher eventPublisher;
 
@@ -33,13 +36,16 @@ public class ProductService {
         }
         Supplier supplier = supplierRepository.findById(dto.getSupplierId())
                 .orElseThrow(() -> new IllegalArgumentException("Proveedor no encontrado."));
+        
+        Category category = categoryRepository.findById(dto.getCategoryId())
+                .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada."));
 
         Product product = Product.builder()
                 .supplier(supplier)
                 .sku(dto.getSku())
                 .name(dto.getName())
                 .description(dto.getDescription())
-                .category(dto.getCategory())
+                .category(category)
                 .unitOfMeasure(dto.getUnitOfMeasure())
                 .build();
 
@@ -144,7 +150,7 @@ public class ProductService {
                 .sku(product.getSku())
                 .name(product.getName())
                 .description(product.getDescription())
-                .category(product.getCategory())
+                .categoryId(product.getCategory().getId())
                 .unitOfMeasure(product.getUnitOfMeasure())
                 .status(product.getStatus())
                 .currentPrice(activePrice != null ? activePrice.getUnitPrice() : null)

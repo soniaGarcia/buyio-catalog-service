@@ -1,8 +1,10 @@
 package com.buyio.catalog.controller;
 
+import com.buyio.catalog.domain.Category;
 import com.buyio.catalog.domain.Price;
 import com.buyio.catalog.domain.Product;
 import com.buyio.catalog.domain.Supplier;
+import com.buyio.catalog.repository.CategoryRepository;
 import com.buyio.catalog.repository.PriceRepository;
 import com.buyio.catalog.repository.ProductRepository;
 import com.buyio.catalog.repository.SupplierRepository;
@@ -25,6 +27,7 @@ public class ProductController {
 
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
+    private final CategoryRepository categoryRepository;
     private final PriceRepository priceRepository;
 
     @GetMapping
@@ -34,8 +37,9 @@ public class ProductController {
                     .filter(Price::getIsActive)
                     .map(Price::getUnitPrice)
                     .findFirst().orElse(BigDecimal.ZERO);
+            String categoryName = p.getCategory() != null ? p.getCategory().getName() : "Sin Categoría";
             return new ProductResponse(p.getId(), p.getSku(), p.getName(), p.getDescription(), 
-                                       p.getCategory(), p.getStatus(), p.getSupplier().getTaxId(), activePrice);
+                                       categoryName, p.getStatus(), p.getSupplier().getTaxId(), activePrice);
         }).toList();
         return ResponseEntity.ok(list);
     }
@@ -46,11 +50,14 @@ public class ProductController {
         Supplier supplier = supplierRepository.findById(req.supplierId())
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
 
+        Category category = categoryRepository.findById(req.categoryId())
+                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+
         Product product = Product.builder()
                 .sku(req.sku())
                 .name(req.name())
                 .description(req.description())
-                .category(req.category())
+                .category(category)
                 .supplier(supplier)
                 .status("ACTIVE")
                 .build();
@@ -72,7 +79,7 @@ public class ProductController {
         @NotBlank String sku,
         @NotBlank String name,
         String description,
-        String category,
+        @NotNull UUID categoryId,
         @NotNull UUID supplierId,
         @NotNull @DecimalMin("0.01") BigDecimal price
     ) {}

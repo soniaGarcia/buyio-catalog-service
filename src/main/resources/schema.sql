@@ -1,5 +1,11 @@
--- Elimina o comenta esta línea incompatible con H2:
--- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TABLE IF NOT EXISTS categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS suppliers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,10 +21,10 @@ CREATE TABLE IF NOT EXISTS suppliers (
 CREATE TABLE IF NOT EXISTS products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+    category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
     sku VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(150) NOT NULL,
     description TEXT,
-    category VARCHAR(50),
     unit_of_measure VARCHAR(20),
     status VARCHAR(20) DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
