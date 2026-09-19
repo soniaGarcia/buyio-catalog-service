@@ -1,17 +1,16 @@
 package com.buyio.catalog.controller;
 
 import com.buyio.catalog.domain.Price;
+import com.buyio.catalog.domain.PriceRequest;
 import com.buyio.catalog.domain.Product;
 import com.buyio.catalog.repository.PriceRepository;
 import com.buyio.catalog.repository.ProductRepository;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -25,7 +24,10 @@ public class PriceController {
 
     @PostMapping
     @Transactional
-    public ResponseEntity<Price> updatePrice(@PathVariable UUID productId, @RequestBody @NotNull @DecimalMin("0.01") BigDecimal newPrice) {
+    public ResponseEntity<Price> updatePrice(
+            @PathVariable UUID productId, 
+            @Valid @RequestBody PriceRequest request) {
+            
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
@@ -35,10 +37,11 @@ public class PriceController {
             p.setValidTo(OffsetDateTime.now());
         });
 
+        // Crear nuevo registro de precio activo
         Price price = Price.builder()
                 .product(product)
-                .unitPrice(newPrice)
-                .currency("USD")
+                .unitPrice(request.unitPrice())
+                .currency(request.currency() != null ? request.currency() : "USD")
                 .isActive(true)
                 .validFrom(OffsetDateTime.now())
                 .build();
