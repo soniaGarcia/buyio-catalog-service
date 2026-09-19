@@ -4,7 +4,6 @@ import com.buyio.catalog.domain.Category;
 import com.buyio.catalog.domain.Price;
 import com.buyio.catalog.domain.Product;
 import com.buyio.catalog.domain.Supplier;
-import com.buyio.catalog.dto.CatalogEvent;
 import com.buyio.catalog.dto.PriceDto;
 import com.buyio.catalog.dto.ProductDto;
 import com.buyio.catalog.repository.PriceRepository;
@@ -27,7 +26,6 @@ public class ProductService {
     private final SupplierRepository supplierRepository;
     private final CategoryRepository categoryRepository;
     private final PriceRepository priceRepository;
-    private final CatalogEventPublisher eventPublisher;
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
@@ -62,17 +60,6 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
 
-        eventPublisher.publishEvent(CatalogEvent.builder()
-                .eventType("PRODUCT_CREATED")
-                .productId(saved.getId())
-                .sku(saved.getSku())
-                .name(saved.getName())
-                .price(dto.getCurrentPrice())
-                .currency(dto.getCurrency())
-                .supplierId(supplier.getId())
-                .timestamp(OffsetDateTime.now())
-                .build());
-
         return mapToDto(saved);
     }
 
@@ -93,17 +80,6 @@ public class ProductService {
                 .build();
 
         Price saved = priceRepository.save(newPrice);
-
-        eventPublisher.publishEvent(CatalogEvent.builder()
-                .eventType("PRICE_UPDATED")
-                .productId(product.getId())
-                .sku(product.getSku())
-                .name(product.getName())
-                .price(saved.getUnitPrice())
-                .currency(saved.getCurrency())
-                .supplierId(product.getSupplier().getId())
-                .timestamp(now)
-                .build());
 
         return PriceDto.builder()
                 .id(saved.getId())
