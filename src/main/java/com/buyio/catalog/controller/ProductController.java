@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -53,6 +54,7 @@ public class ProductController {
         Category category = categoryRepository.findById(req.categoryId())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
+        // Requisito: Nacen como activos (ACTIVE)
         Product product = Product.builder()
                 .sku(req.sku())
                 .name(req.name())
@@ -73,6 +75,27 @@ public class ProductController {
         priceRepository.save(price);
 
         return ResponseEntity.ok(saved);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable UUID id, @RequestParam String status) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+        // Regla de Negocio: Verificar órdenes en estado INGRESADO o SOLICITADO
+ /*       if ("INACTIVE".equalsIgnoreCase(status)) {
+            List<String> activeStatuses = List.of("INGRESADO", "SOLICITADO");
+            boolean hasActiveOrders = orderItemRepository.existsByProductIdAndOrderStatusIn(id, activeStatuses);
+            
+            if (hasActiveOrders) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "message", "No se puede inactivar el producto porque está asociado a órdenes en estado INGRESADO o SOLICITADO."
+                ));
+            }
+        }*/
+
+        product.setStatus(status.toUpperCase());
+        return ResponseEntity.ok(productRepository.save(product));
     }
 
     public record CreateProductRequest(

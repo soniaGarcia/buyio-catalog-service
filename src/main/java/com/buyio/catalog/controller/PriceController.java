@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -47,5 +48,11 @@ public class PriceController {
                 .build();
 
         return ResponseEntity.ok(priceRepository.save(price));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Price>> getPriceHistory(@PathVariable UUID productId) {
+        List<Price> history = priceRepository.findByProductIdOrderByValidFromDesc(productId);
+        return ResponseEntity.ok(history);
     }
 }

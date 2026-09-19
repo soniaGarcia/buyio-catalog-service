@@ -8,4 +8,7 @@ import java.util.UUID;
 public interface ProductRepository extends JpaRepository<Product, UUID> {
     boolean existsBySku(String sku);
     Optional<Product> findBySku(String sku);
+
+    long countByCategoryId(UUID categoryId);
+    boolean existsByCategoryId(UUID categoryId);
 }
