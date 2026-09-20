@@ -5,21 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class CatalogEvent {
-    private String eventType; // PRODUCT_CREATED, PRODUCT_UPDATED, PRICE_UPDATED
-    private UUID productId;
-    private String sku;
-    private String name;
-    private BigDecimal price;
-    private String currency;
-    private UUID supplierId;
-    private OffsetDateTime timestamp;
+    private String eventType;
+    private UUID productId; // Mantiene compatibilidad con el extractor del audit-service
+    private Object data;
+    private String actionUser;
+    private Long timestamp;
 }

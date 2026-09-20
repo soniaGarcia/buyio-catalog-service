@@ -4,10 +4,12 @@ import com.buyio.catalog.domain.Category;
 import com.buyio.catalog.domain.Price;
 import com.buyio.catalog.domain.Product;
 import com.buyio.catalog.domain.Supplier;
+import com.buyio.catalog.dto.CatalogEvent;
 import com.buyio.catalog.repository.CategoryRepository;
 import com.buyio.catalog.repository.PriceRepository;
 import com.buyio.catalog.repository.ProductRepository;
 import com.buyio.catalog.repository.SupplierRepository;
+import com.buyio.catalog.service.CatalogEventPublisher;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class ProductController {
     private final SupplierRepository supplierRepository;
     private final CategoryRepository categoryRepository;
     private final PriceRepository priceRepository;
+    private final CatalogEventPublisher eventPublisher; // Inyección para auditoría
 
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAll() {
@@ -54,7 +57,6 @@ public class ProductController {
         Category category = categoryRepository.findById(req.categoryId())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
-        // Requisito: Nacen como activos (ACTIVE)
         Product product = Product.builder()
                 .sku(req.sku())
                 .name(req.name())
@@ -74,28 +76,42 @@ public class ProductController {
                 .build();
         priceRepository.save(price);
 
+        // PUBLICACIÓN DE EVENTO DE AUDITORÍA
+        eventPublisher.publishEvent(CatalogEvent.builder()
+                .eventType("PRODUCT_CREATED")
+                .productId(saved.getId())
+                .data(Map.of(
+                    "sku", saved.getSku(),
+                    "name", saved.getName(),
+                    "initialPrice", req.price(),
+                    "categoryId", category.getId(),
+                    "supplierId", supplier.getId()
+                ))
+                .timestamp(System.currentTimeMillis())
+                .build());
+
         return ResponseEntity.ok(saved);
     }
 
     @PatchMapping("/{id}/status")
+    @Transactional
     public ResponseEntity<?> updateStatus(@PathVariable UUID id, @RequestParam String status) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        // Regla de Negocio: Verificar órdenes en estado INGRESADO o SOLICITADO
- /*       if ("INACTIVE".equalsIgnoreCase(status)) {
-            List<String> activeStatuses = List.of("INGRESADO", "SOLICITADO");
-            boolean hasActiveOrders = orderItemRepository.existsByProductIdAndOrderStatusIn(id, activeStatuses);
-            
-            if (hasActiveOrders) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "message", "No se puede inactivar el producto porque está asociado a órdenes en estado INGRESADO o SOLICITADO."
-                ));
-            }
-        }*/
-
+        String oldStatus = product.getStatus();
         product.setStatus(status.toUpperCase());
-        return ResponseEntity.ok(productRepository.save(product));
+        Product updated = productRepository.save(product);
+
+        // PUBLICACIÓN DE EVENTO DE AUDITORÍA
+        eventPublisher.publishEvent(CatalogEvent.builder()
+                .eventType("PRODUCT_STATUS_UPDATED")
+                .productId(updated.getId())
+                .data(Map.of("oldStatus", oldStatus, "newStatus", updated.getStatus()))
+                .timestamp(System.currentTimeMillis())
+                .build());
+
+        return ResponseEntity.ok(updated);
     }
 
     public record CreateProductRequest(
