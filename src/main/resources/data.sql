@@ -7,7 +7,7 @@ ON CONFLICT (name) DO NOTHING;
 
 -- 2. Inserción de Proveedor Inicial
 INSERT INTO suppliers (id, tax_id, name, contact_email, phone, status, created_at, updated_at)
-VALUES ('11111111-1111-1111-1111-111111111111', 'J-12345678-0', 'Tech Supplies Inc.', 'contacto@techsupplies.com', '+1555123456', 'ACTIVE', NOW(), NOW())
+VALUES ('11111111-1111-1111-1111-111111111111', '0614-150220-101-1', 'Tech Supplies Inc.', 'contacto@techsupplies.com', ' +503 7890-1234', 'ACTIVE', NOW(), NOW())
 ON CONFLICT (tax_id) DO NOTHING;
 
 -- 3. Productos Iniciales
